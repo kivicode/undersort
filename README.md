@@ -34,8 +34,8 @@ order = ["public", "protected", "private"]
 
 # Method type ordering within each visibility level (secondary sort, optional)
 # Options: "class" (classmethod), "static" (staticmethod), "instance" (regular methods)
-# Default: ["class", "static", "instance"]
-method_type_order = ["class", "static", "instance"]
+# Default: ["instance", "class", "static"]
+method_type_order = ["instance", "class", "static"]
 ```
 
 ### Method Visibility Rules
@@ -55,19 +55,19 @@ method_type_order = ["class", "static", "instance"]
 Methods are sorted in two levels:
 
 1. **Primary**: By visibility (public → protected → private)
-2. **Secondary**: Within each visibility level, by method type (class → static → instance by default)
+2. **Secondary**: Within each visibility level, by method type (instance → class → static by default)
 
 Example: With default configuration, the order would be:
 
-1. Public class methods
-2. Public static methods
-3. Public instance methods
-4. Protected class methods
-5. Protected static methods
-6. Protected instance methods
-7. Private class methods
-8. Private static methods
-9. Private instance methods
+1. Public instance methods
+2. Public class methods
+3. Public static methods
+4. Protected instance methods
+5. Protected class methods
+6. Protected static methods
+7. Private instance methods
+8. Private class methods
+9. Private static methods
 
 ## Usage
 
@@ -163,6 +163,12 @@ class Example:
 
 ```python
 class Example:
+    def __init__(self):
+        pass
+
+    def public_instance(self):
+        pass
+
     @classmethod
     def public_class(cls):
         pass
@@ -171,17 +177,11 @@ class Example:
     def public_static():
         pass
 
-    def __init__(self):
-        pass
-
-    def public_instance(self):
+    def _protected_instance(self):
         pass
 
     @classmethod
     def _protected_class(cls):
-        pass
-
-    def _protected_instance(self):
         pass
 
     def __private_method(self):
@@ -191,7 +191,7 @@ class Example:
 The methods are now organized by:
 
 1. **Visibility**: public (including `__init__`) → protected → private
-2. **Type** (within each visibility): class → static → instance
+2. **Type** (within each visibility): instance → class → static
 
 ## Development
 

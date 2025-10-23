@@ -382,7 +382,7 @@ class Example:
 
         try:
             order = ["public", "protected", "private"]
-            method_type_order = ["class", "static", "instance"]
+            method_type_order = ["instance", "class", "static"]
             was_modified = sort_file(temp_path, order, method_type_order)
 
             assert was_modified is True
@@ -390,28 +390,27 @@ class Example:
             with open(temp_path) as f:
                 result = f.read()
 
-            # Check order: class -> static -> instance
+            instance_idx = result.find("def instance_method")
             class_idx = result.find("def class_method")
             static_idx = result.find("def static_method")
-            instance_idx = result.find("def instance_method")
 
-            assert class_idx < static_idx < instance_idx
+            assert instance_idx < class_idx < static_idx
         finally:
             temp_path.unlink()
 
     def test_method_type_sorting_custom_order(self) -> None:
-        """Test custom method type ordering (instance first)."""
+        """Test custom method type ordering (class first)."""
         source = """
 class Example:
+    def instance_method(self):
+        pass
+
     @classmethod
     def class_method(cls):
         pass
 
     @staticmethod
     def static_method():
-        pass
-
-    def instance_method(self):
         pass
 """
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
@@ -420,7 +419,7 @@ class Example:
 
         try:
             order = ["public", "protected", "private"]
-            method_type_order = ["instance", "static", "class"]
+            method_type_order = ["class", "static", "instance"]
             was_modified = sort_file(temp_path, order, method_type_order)
 
             assert was_modified is True
@@ -428,12 +427,11 @@ class Example:
             with open(temp_path) as f:
                 result = f.read()
 
-            # Check order: instance -> static -> class
-            instance_idx = result.find("def instance_method")
-            static_idx = result.find("def static_method")
             class_idx = result.find("def class_method")
+            static_idx = result.find("def static_method")
+            instance_idx = result.find("def instance_method")
 
-            assert instance_idx < static_idx < class_idx
+            assert class_idx < static_idx < instance_idx
         finally:
             temp_path.unlink()
 
@@ -465,7 +463,7 @@ class Example:
 
         try:
             order = ["public", "protected", "private"]
-            method_type_order = ["class", "static", "instance"]
+            method_type_order = ["instance", "class", "static"]
             was_modified = sort_file(temp_path, order, method_type_order)
 
             assert was_modified is True
@@ -473,23 +471,18 @@ class Example:
             with open(temp_path) as f:
                 result = f.read()
 
-            # Public methods should come first
-            public_class_idx = result.find("def public_class")
             public_instance_idx = result.find("def public_instance")
+            public_class_idx = result.find("def public_class")
 
-            # Protected methods should come after public
+            protected_instance_idx = result.find("def _protected_instance")
             protected_class_idx = result.find("def _protected_class")
             protected_static_idx = result.find("def _protected_static")
-            protected_instance_idx = result.find("def _protected_instance")
 
-            # Check visibility ordering
-            assert public_class_idx < protected_class_idx
             assert public_instance_idx < protected_instance_idx
+            assert public_class_idx < protected_class_idx
 
-            # Within public: class -> static -> instance
-            assert public_class_idx < public_instance_idx
+            assert public_instance_idx < public_class_idx
 
-            # Within protected: class -> static -> instance
-            assert protected_class_idx < protected_static_idx < protected_instance_idx
+            assert protected_instance_idx < protected_class_idx < protected_static_idx
         finally:
             temp_path.unlink()

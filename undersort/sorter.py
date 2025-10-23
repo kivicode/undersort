@@ -63,10 +63,10 @@ class MethodSorter(cst.CSTTransformer):
                    (e.g., ["public", "protected", "private"])
             method_type_order: Optional list specifying the order of method types
                               within each visibility level
-                              (e.g., ["class", "static", "instance"])
+                              (e.g., ["instance", "class", "static"])
         """
         self.order = order
-        self.method_type_order = method_type_order or ["class", "static", "instance"]
+        self.method_type_order = method_type_order or ["instance", "class", "static"]
         self.modified = False
 
     def leave_ClassDef(self, original_node: cst.ClassDef, updated_node: cst.ClassDef) -> cst.ClassDef:

@@ -47,8 +47,8 @@ order = ["public", "protected", "private"]
 
 # Method type ordering within each visibility level (optional)
 # Options: "class" (classmethod), "static" (staticmethod), "instance" (regular methods)
-# Default order if not specified: ["class", "static", "instance"]
-method_type_order = ["class", "static", "instance"]
+# Default order if not specified: ["instance", "class", "static"]
+method_type_order = ["instance", "class", "static"]
 
 [tool.ruff]
 unsafe-fixes = true
