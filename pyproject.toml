@@ -1,0 +1,125 @@
+[project]
+name = "undersort"
+version = "0.1.0"
+description = "A tool to sort class methods by visibility (public, protected, private)"
+authors = [{ name = "KiviCode", email = "kivicode.dev@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = ["libcst>=1.1.0", "rich>=13.0.0"]
+
+[project.scripts]
+undersort = "undersort.main:main"
+
+[dependency-groups]
+dev = ["pytest>=8.0.0", "pytest-cov>=4.1.0", "ruff>=0.9.0"]
+
+[tool.uv]
+package = true
+
+[tool.undersort]
+# Method visibility ordering: public (no underscore), protected (single underscore), private (double underscore)
+# Customize the order by specifying: "public", "protected", "private"
+order = ["public", "protected", "private"]
+
+# Method type ordering within each visibility level (optional)
+# Options: "class" (classmethod), "static" (staticmethod), "instance" (regular methods)
+# Default order if not specified: ["class", "static", "instance"]
+method_type_order = ["class", "static", "instance"]
+
+[tool.ruff]
+unsafe-fixes = true
+exclude = [".venv"]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+select = [
+    # Default rules
+    "E",     # pycodestyle errors
+    "F",     # Pyflakes
+    "C4",    # flake8-comprehensions
+    "C90",   # mccabe complex structure
+    "D",     # pydocstyle
+    "I",     # isort
+    "PT",    # flake8-pytest-style
+    "PL",    # Pylint
+    "SIM",   # flake8-simplify
+    "UP",    # pyupgrade
+    "W",     # pycodestyle warnings
+    "S",     # flake8-bandit
+    "ANN",   # flake8-annotations
+    "B",     # flake8-bugbear
+    "NPY",   # NumPy-specific rules
+    "UP045",
+]
+extend-select = [
+    "RUF022",  # unsorted-dunder-all
+    "PLR6301", # no-self-use
+    "PLC0415",
+    "E402",    # module-import-not-at-top-of-file
+]
+ignore = [
+    "B024",
+    "B028",    # no-explicit-stacklevel
+    "B904",
+    "C901",    # complex-structure
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D107",
+    "D415",
+    "D200",
+    "D205",
+    "D212",
+    "E722",
+    "ANN002",
+    "ANN003",
+    "ANN204",  # dynamically typed expressions
+    "ANN401",
+    "PLR0913",
+    "PLR2004", # magic value used in comparison
+    "PT028",   # test function parameter has default argument
+]
+
+[tool.ruff.lint.pylint]
+max-locals = 20
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 120
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # Allow assert in tests
+    "ANN201",  # Don't require return type annotations in tests
+    "PLR6301", # Allow methods that could be functions in test classes
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-ra", "--strict-markers", "--strict-config", "--showlocals"]
+
+[tool.coverage.run]
+source = ["undersort"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
