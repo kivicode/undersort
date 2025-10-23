@@ -9,6 +9,46 @@ import libcst as cst
 from undersort import logger
 
 
+def has_nosort_comment(node: cst.FunctionDef | cst.ClassDef) -> bool:
+    """Check if a node has a nosort comment.
+
+    Args:
+        node: The node to check
+
+    Returns:
+        True if the node has a # nosort comment
+    """
+    if hasattr(node, "leading_lines"):
+        for line in node.leading_lines:
+            if isinstance(line, cst.EmptyLine) and line.comment and "nosort" in line.comment.value.lower():
+                return True
+
+    return bool(
+        hasattr(node, "body")
+        and hasattr(node.body, "header")
+        and isinstance(node.body.header, cst.TrailingWhitespace)
+        and node.body.header.comment
+        and "nosort" in node.body.header.comment.value.lower()
+    )
+
+
+def file_has_nosort(module: cst.Module) -> bool:
+    """Check if a file has a file-level nosort directive.
+
+    Args:
+        module: The module to check
+
+    Returns:
+        True if the file has a # nosort: file comment
+    """
+    for line in module.header:
+        if isinstance(line, cst.EmptyLine) and line.comment:
+            comment_text = line.comment.value.lower()
+            if "nosort" in comment_text and "file" in comment_text:
+                return True
+    return False
+
+
 def get_method_visibility(method_name: str) -> Literal["public", "private", "protected"]:
     """Determine method visibility based on naming convention.
 
@@ -71,7 +111,9 @@ class MethodSorter(cst.CSTTransformer):
         self.modified = False
 
     def leave_ClassDef(  # noqa: PLR0912, PLR0915
-        self, original_node: cst.ClassDef, updated_node: cst.ClassDef
+        self,
+        original_node: cst.ClassDef,
+        updated_node: cst.ClassDef,  # noqa: ARG002
     ) -> cst.ClassDef:
         """Sort methods within a class definition.
 
@@ -82,6 +124,9 @@ class MethodSorter(cst.CSTTransformer):
         Returns:
             ClassDef with sorted methods
         """
+        if has_nosort_comment(updated_node):
+            return updated_node
+
         methods = []
         non_methods = []
 
@@ -94,7 +139,17 @@ class MethodSorter(cst.CSTTransformer):
         if not methods:
             return updated_node
 
-        method_with_index = [(i, method) for i, method in enumerate(methods)]
+        sortable_methods = []
+        nosort_methods = []
+
+        for i, method in enumerate(methods):
+            if has_nosort_comment(method):
+                nosort_methods.append((i, method))
+            else:
+                sortable_methods.append((i, method))
+
+        if not sortable_methods:
+            return updated_node
 
         method_groups: dict[str, dict[str, list[tuple[int, cst.FunctionDef]]]] = {
             "public": {"class": [], "static": [], "instance": []},
@@ -102,7 +157,7 @@ class MethodSorter(cst.CSTTransformer):
             "private": {"class": [], "static": [], "instance": []},
         }
 
-        for idx, method in method_with_index:
+        for idx, method in sortable_methods:
             visibility = get_method_visibility(method.name.value)
             method_type = get_method_type(method)
             method_groups[visibility][method_type].append((idx, method))
@@ -145,8 +200,14 @@ class MethodSorter(cst.CSTTransformer):
 
             current_position += len(group)
 
-        if methods != sorted_methods:
+        all_sorted = sorted_methods[:]
+        for orig_idx, nosort_method in sorted(nosort_methods, key=lambda x: x[0]):
+            all_sorted.insert(orig_idx, nosort_method)
+
+        if methods != all_sorted:
             self.modified = True
+
+        sorted_methods = all_sorted
 
         leading_non_methods = []
         trailing_non_methods = []
@@ -192,6 +253,9 @@ def sort_file(
         tree = cst.parse_module(source_code)
     except cst.ParserSyntaxError as e:
         raise ValueError(f"Syntax error in {file_path}: {e}")
+
+    if file_has_nosort(tree):
+        return False
 
     sorter = MethodSorter(order, method_type_order)
     new_tree = tree.visit(sorter)

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "undersort"
-version = "0.1.3"
+version = "0.1.4"
 description = "A tool to sort class methods by visibility (public, protected, private)"
 authors = [{ name = "KiviCode", email = "kivicode.dev@gmail.com" }]
 readme = "README.md"
