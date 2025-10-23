@@ -1,6 +1,6 @@
 # undersort
 
-A Python tool that automatically sorts class methods by visibility (public, protected, private) and type (class, static, instance) with configurable ordering.
+A Python tool that automatically sorts class methods by visibility (public, protected, private) and type (class, static, instance).
 
 ## Features
 
