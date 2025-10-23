@@ -34,9 +34,7 @@ def collect_python_files(path: Path, recursive: bool = True) -> list[Path]:
         filtered_files = [
             f
             for f in all_files
-            if not any(
-                part in exclude_dirs or (part.startswith(".") and part != ".") for part in f.parts
-            )
+            if not any(part in exclude_dirs or (part.startswith(".") and part != ".") for part in f.parts)
         ]
 
         return sorted(filtered_files)
