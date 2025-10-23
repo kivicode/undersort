@@ -16,10 +16,15 @@ A Python tool that automatically sorts class methods by visibility (public, prot
 
 ```bash
 # Using uv (recommended)
-uv pip install -e .
+uv add undersort
 
 # Using pip
-pip install -e .
+pip install undersort
+
+# For development
+git clone https://github.com/kivicode/undersort
+cd undersort
+uv sync
 ```
 
 ## Configuration
@@ -58,6 +63,7 @@ Methods are sorted in two levels:
 2. **Secondary**: Within each visibility level, by method type (instance → class → static by default)
 
 The sorting algorithm **minimizes movement** to preserve the original order as much as possible:
+
 - Methods that need to move DOWN (to a later section) are placed at the **beginning** of their target section
 - Methods that need to move UP (to an earlier section) are placed at the **end** of their target section
 - Methods already in the correct section maintain their relative order
@@ -121,9 +127,10 @@ repos:
     hooks:
       - id: undersort
         name: undersort
-        entry: uv run undersort
-        language: system
+        entry: undersort
+        language: python
         types: [python]
+        additional_dependencies: ["undersort"]
 ```
 
 Then install the hook:
