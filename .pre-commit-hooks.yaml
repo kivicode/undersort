@@ -1,0 +1,7 @@
+- id: undersort
+  name: undersort
+  description: Sort class methods by visibility (public, protected, private)
+  entry: undersort
+  language: python
+  types: [python]
+  require_serial: false

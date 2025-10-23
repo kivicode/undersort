@@ -1,0 +1,11 @@
+# Sample pre-commit configuration
+# To use: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: local
+    hooks:
+      - id: undersort
+        name: undersort
+        entry: uv run undersort
+        language: system
+        types: [python]
