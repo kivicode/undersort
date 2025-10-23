@@ -104,7 +104,7 @@ undersort --diff example.py
 undersort --check --diff src/
 ```
 
-**Note**: By default, undersort excludes common directories like `.venv`, `.git`, `__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, and `node_modules` when scanning directories.
+**Note**: By default, undersort excludes all dot-prefixed directories (e.g., `.venv`, `.git`, `.pytest_cache`) and common build directories (`venv`, `__pycache__`, `node_modules`) when scanning directories recursively.
 
 ### Pre-commit Integration
 

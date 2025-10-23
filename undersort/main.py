@@ -19,15 +19,9 @@ def collect_python_files(path: Path, recursive: bool = True) -> list[Path]:
     Returns:
         List of Python file paths
     """
-    # Common directories to exclude
     exclude_dirs = {
-        ".venv",
         "venv",
-        ".git",
         "__pycache__",
-        ".pytest_cache",
-        ".mypy_cache",
-        ".ruff_cache",
         "node_modules",
     }
 
@@ -37,7 +31,13 @@ def collect_python_files(path: Path, recursive: bool = True) -> list[Path]:
     if path.is_dir():
         pattern = "**/*.py" if recursive else "*.py"
         all_files = path.glob(pattern)
-        filtered_files = [f for f in all_files if not any(excluded in f.parts for excluded in exclude_dirs)]
+        filtered_files = [
+            f
+            for f in all_files
+            if not any(
+                part in exclude_dirs or (part.startswith(".") and part != ".") for part in f.parts
+            )
+        ]
 
         return sorted(filtered_files)
 
