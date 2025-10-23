@@ -57,7 +57,12 @@ Methods are sorted in two levels:
 1. **Primary**: By visibility (public → protected → private)
 2. **Secondary**: Within each visibility level, by method type (instance → class → static by default)
 
-Example: With default configuration, the order would be:
+The sorting algorithm **minimizes movement** to preserve the original order as much as possible:
+- Methods that need to move DOWN (to a later section) are placed at the **beginning** of their target section
+- Methods that need to move UP (to an earlier section) are placed at the **end** of their target section
+- Methods already in the correct section maintain their relative order
+
+Example order with default configuration:
 
 1. Public instance methods
 2. Public class methods

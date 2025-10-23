@@ -2,13 +2,14 @@
 
 import difflib
 from pathlib import Path
+from typing import Literal
 
 import libcst as cst
 
 from undersort import logger
 
 
-def get_method_visibility(method_name: str) -> str:
+def get_method_visibility(method_name: str) -> Literal["public", "private", "protected"]:
     """Determine method visibility based on naming convention.
 
     Args:
@@ -69,7 +70,9 @@ class MethodSorter(cst.CSTTransformer):
         self.method_type_order = method_type_order or ["instance", "class", "static"]
         self.modified = False
 
-    def leave_ClassDef(self, original_node: cst.ClassDef, updated_node: cst.ClassDef) -> cst.ClassDef:
+    def leave_ClassDef(  # noqa: PLR0912, PLR0915
+        self, original_node: cst.ClassDef, updated_node: cst.ClassDef
+    ) -> cst.ClassDef:
         """Sort methods within a class definition.
 
         Args:
@@ -91,21 +94,56 @@ class MethodSorter(cst.CSTTransformer):
         if not methods:
             return updated_node
 
-        method_groups: dict[str, dict[str, list[cst.FunctionDef]]] = {
+        method_with_index = [(i, method) for i, method in enumerate(methods)]
+
+        method_groups: dict[str, dict[str, list[tuple[int, cst.FunctionDef]]]] = {
             "public": {"class": [], "static": [], "instance": []},
             "protected": {"class": [], "static": [], "instance": []},
             "private": {"class": [], "static": [], "instance": []},
         }
 
-        for method in methods:
+        for idx, method in method_with_index:
             visibility = get_method_visibility(method.name.value)
             method_type = get_method_type(method)
-            method_groups[visibility][method_type].append(method)
+            method_groups[visibility][method_type].append((idx, method))
 
-        sorted_methods = []
+        group_order = []
         for visibility in self.order:
             for method_type in self.method_type_order:
-                sorted_methods.extend(method_groups[visibility][method_type])
+                group_order.append((visibility, method_type))
+
+        sorted_methods = []
+        current_position = 0
+
+        for visibility, method_type in group_order:
+            group = method_groups[visibility][method_type]
+            if not group:
+                continue
+
+            group_indices = [idx for idx, _ in group]
+            min_original_idx = min(group_indices)
+            max_original_idx = max(group_indices)
+
+            moved_down = []
+            in_place = []
+            moved_up = []
+
+            for idx, method in group:
+                if idx < min_original_idx or (idx < current_position and current_position > 0):
+                    moved_down.append((idx, method))
+                elif idx > max_original_idx:
+                    moved_up.append((idx, method))
+                else:
+                    in_place.append((idx, method))
+
+            moved_down.sort(key=lambda x: x[0])
+            in_place.sort(key=lambda x: x[0])
+            moved_up.sort(key=lambda x: x[0])
+
+            group_sorted = moved_down + in_place + moved_up
+            sorted_methods.extend([method for _, method in group_sorted])
+
+            current_position += len(group)
 
         if methods != sorted_methods:
             self.modified = True
