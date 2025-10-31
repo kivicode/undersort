@@ -10,11 +10,12 @@ def load_config() -> dict[str, list[str] | None]:
     """Load configuration from pyproject.toml.
 
     Returns:
-        Dictionary with 'order' and 'method_type_order' keys.
+        Dictionary with 'order', 'method_type_order', and 'exclude' keys.
     """
     default_config: dict[str, list[str] | None] = {
         "order": ["public", "protected", "private"],
         "method_type_order": None,
+        "exclude": None,
     }
 
     pyproject_path = _find_pyproject_toml()
@@ -49,6 +50,13 @@ def load_config() -> dict[str, list[str] | None]:
             logger.warning(f"Invalid method_type_order values in {pyproject_path}. Using default.")
         else:
             result["method_type_order"] = method_type_order
+
+    if "exclude" in config:
+        exclude = config["exclude"]
+        if isinstance(exclude, list):
+            result["exclude"] = exclude
+        else:
+            logger.warning(f"Invalid exclude value in {pyproject_path}. Must be a list.")
 
     return result
 

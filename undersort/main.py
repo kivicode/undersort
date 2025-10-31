@@ -1,6 +1,7 @@
 """Main entry point for undersort CLI."""
 
 import argparse
+import fnmatch
 import sys
 from pathlib import Path
 
@@ -9,12 +10,13 @@ from undersort.config import load_config
 from undersort.sorter import sort_file
 
 
-def collect_python_files(path: Path, recursive: bool = True) -> list[Path]:
+def collect_python_files(path: Path, recursive: bool = True, exclude_patterns: list[str] | None = None) -> list[Path]:
     """Collect Python files from a path (file or directory).
 
     Args:
         path: File or directory path
         recursive: If True, recursively search directories
+        exclude_patterns: List of glob patterns to exclude (e.g., ["tests/*", "migrations/*.py"])
 
     Returns:
         List of Python file paths
@@ -37,12 +39,47 @@ def collect_python_files(path: Path, recursive: bool = True) -> list[Path]:
             if not any(part in exclude_dirs or (part.startswith(".") and part != ".") for part in f.parts)
         ]
 
+        if exclude_patterns:
+            filtered_files = [f for f in filtered_files if not _matches_any_pattern(f, exclude_patterns)]
+
         return sorted(filtered_files)
 
     return []
 
 
-def main() -> int:
+def _matches_any_pattern(file_path: Path, patterns: list[str]) -> bool:
+    """Check if a file matches any of the exclusion patterns.
+
+    Args:
+        file_path: Path to check
+        patterns: List of glob patterns
+
+    Returns:
+        True if file matches any pattern, False otherwise
+    """
+    path_str = str(file_path)
+
+    for pattern in patterns:
+        if fnmatch.fnmatch(path_str, pattern):
+            return True
+
+        if "/" not in pattern:
+            if fnmatch.fnmatch(file_path.name, pattern):
+                return True
+            continue
+
+        if fnmatch.fnmatch(path_str, f"*/{pattern}"):
+            return True
+
+        for part_idx in range(len(file_path.parts)):
+            subpath = str(Path(*file_path.parts[part_idx:]))
+            if fnmatch.fnmatch(subpath, pattern):
+                return True
+
+    return False
+
+
+def main() -> int:  # noqa: PLR0912
     """Main entry point for undersort."""
     parser = argparse.ArgumentParser(description="Sort class methods by visibility (public, protected, private)")
     parser.add_argument(
@@ -68,10 +105,22 @@ def main() -> int:
         default=True,
         help="Don't recursively search directories",
     )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        help="Exclude files/directories matching pattern (can be used multiple times)",
+    )
 
     args = parser.parse_args()
 
     config = load_config()
+
+    exclude_patterns: list[str] = []
+    config_exclude = config.get("exclude")
+    if config_exclude:
+        exclude_patterns.extend(config_exclude)
+    if args.exclude:
+        exclude_patterns.extend(args.exclude)
 
     all_files: list[Path] = []
     for path in args.paths:
@@ -79,7 +128,7 @@ def main() -> int:
             logger.error(f"Path not found: {path}")
             continue
 
-        python_files = collect_python_files(path, args.recursive)
+        python_files = collect_python_files(path, args.recursive, exclude_patterns or None)
         all_files.extend(python_files)
 
     if not all_files:

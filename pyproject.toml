@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "undersort"
-version = "0.1.4"
+version = "0.1.5"
 description = "A tool to sort class methods by visibility (public, protected, private)"
 authors = [{ name = "KiviCode", email = "kivicode.dev@gmail.com" }]
 readme = "README.md"
@@ -49,6 +49,10 @@ order = ["public", "protected", "private"]
 # Options: "class" (classmethod), "static" (staticmethod), "instance" (regular methods)
 # Default order if not specified: ["instance", "class", "static"]
 method_type_order = ["instance", "class", "static"]
+
+# Exclude files/directories matching these patterns (optional)
+# Patterns support glob syntax (e.g., "tests/*", "migrations/*.py", "**/generated/*")
+# exclude = ["tests/*", "migrations/*.py"]
 
 [tool.ruff]
 unsafe-fixes = true

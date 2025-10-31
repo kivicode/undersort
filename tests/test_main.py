@@ -107,3 +107,75 @@ class TestCollectPythonFiles:
         assert result[0].name == "a.py"
         assert result[1].name == "b.py"
         assert result[2].name == "c.py"
+
+    def test_exclude_patterns_simple(self, tmp_path: Path) -> None:
+        """Test excluding files by simple pattern."""
+        (tmp_path / "main.py").write_text("# main")
+        (tmp_path / "test.py").write_text("# test")
+        (tmp_path / "setup.py").write_text("# setup")
+
+        result = collect_python_files(tmp_path, recursive=False, exclude_patterns=["test.py"])
+
+        assert len(result) == 2
+        assert any(f.name == "main.py" for f in result)
+        assert any(f.name == "setup.py" for f in result)
+        assert not any(f.name == "test.py" for f in result)
+
+    def test_exclude_patterns_wildcard(self, tmp_path: Path) -> None:
+        """Test excluding files by wildcard pattern."""
+        (tmp_path / "main.py").write_text("# main")
+        (tmp_path / "test_one.py").write_text("# test")
+        (tmp_path / "test_two.py").write_text("# test")
+
+        result = collect_python_files(tmp_path, recursive=False, exclude_patterns=["test_*.py"])
+
+        assert len(result) == 1
+        assert result[0].name == "main.py"
+
+    def test_exclude_patterns_directory(self, tmp_path: Path) -> None:
+        """Test excluding entire directories."""
+        (tmp_path / "main.py").write_text("# main")
+        (tmp_path / "tests").mkdir()
+        (tmp_path / "tests" / "test_one.py").write_text("# test")
+        (tmp_path / "tests" / "test_two.py").write_text("# test")
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "app.py").write_text("# app")
+
+        result = collect_python_files(tmp_path, recursive=True, exclude_patterns=["tests/*"])
+
+        assert len(result) == 2
+        assert any(f.name == "main.py" for f in result)
+        assert any(f.name == "app.py" for f in result)
+        assert not any("test" in f.name for f in result)
+
+    def test_exclude_patterns_multiple(self, tmp_path: Path) -> None:
+        """Test excluding with multiple patterns."""
+        (tmp_path / "main.py").write_text("# main")
+        (tmp_path / "test.py").write_text("# test")
+        (tmp_path / "migrations").mkdir()
+        (tmp_path / "migrations" / "001.py").write_text("# migration")
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "app.py").write_text("# app")
+
+        result = collect_python_files(tmp_path, recursive=True, exclude_patterns=["test.py", "migrations/*"])
+
+        assert len(result) == 2
+        assert any(f.name == "main.py" for f in result)
+        assert any(f.name == "app.py" for f in result)
+        assert not any(f.name == "test.py" for f in result)
+        assert not any("001.py" in str(f) for f in result)
+
+    def test_exclude_patterns_nested_directories(self, tmp_path: Path) -> None:
+        """Test excluding nested directories."""
+        (tmp_path / "main.py").write_text("# main")
+        (tmp_path / "tests").mkdir()
+        (tmp_path / "tests" / "unit").mkdir()
+        (tmp_path / "tests" / "unit" / "test_one.py").write_text("# test")
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "app.py").write_text("# app")
+
+        result = collect_python_files(tmp_path, recursive=True, exclude_patterns=["tests/*"])
+
+        assert len(result) == 2
+        assert any(f.name == "main.py" for f in result)
+        assert any(f.name == "app.py" for f in result)

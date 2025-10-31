@@ -41,6 +41,10 @@ order = ["public", "protected", "private"]
 # Options: "class" (classmethod), "static" (staticmethod), "instance" (regular methods)
 # Default: ["instance", "class", "static"]
 method_type_order = ["instance", "class", "static"]
+
+# Exclude files/directories matching these patterns (optional)
+# Patterns support glob syntax (e.g., "tests/*", "migrations/*.py", "**/generated/*")
+# exclude = ["tests/*", "migrations/*.py"]
 ```
 
 ### Method Visibility Rules
@@ -158,9 +162,15 @@ undersort --diff example.py
 
 # Combine flags
 undersort --check --diff src/
+
+# Exclude specific files or directories
+undersort --exclude "tests/*" --exclude "migrations/*.py" src/
+
+# Multiple exclude patterns (can be combined with config file patterns)
+undersort --exclude "test_*.py" --exclude "*/legacy/*" .
 ```
 
-**Note**: By default, undersort excludes all dot-prefixed directories (e.g., `.venv`, `.git`, `.pytest_cache`) and common build directories (`venv`, `__pycache__`, `node_modules`) when scanning directories recursively.
+**Note**: By default, undersort excludes all dot-prefixed directories (e.g., `.venv`, `.git`, `.pytest_cache`) and common build directories (`venv`, `__pycache__`, `node_modules`) when scanning directories recursively. You can add custom exclusions via CLI flags or the config file.
 
 ### Pre-commit Integration
 

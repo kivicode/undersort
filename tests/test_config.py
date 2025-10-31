@@ -14,7 +14,7 @@ class TestConfigLoading:
         """Test that default config is returned when no pyproject.toml exists."""
         monkeypatch.chdir(tmp_path)
         config = load_config()
-        assert config == {"order": ["public", "protected", "private"], "method_type_order": None}
+        assert config == {"order": ["public", "protected", "private"], "method_type_order": None, "exclude": None}
 
     def test_load_custom_order(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test loading custom order from pyproject.toml."""
@@ -27,7 +27,7 @@ order = ["private", "protected", "public"]
 
         monkeypatch.chdir(tmp_path)
         config = load_config()
-        assert config == {"order": ["private", "protected", "public"], "method_type_order": None}
+        assert config == {"order": ["private", "protected", "public"], "method_type_order": None, "exclude": None}
 
     def test_invalid_order_values(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that invalid order values fall back to default."""
@@ -40,7 +40,7 @@ order = ["public", "invalid", "private"]
 
         monkeypatch.chdir(tmp_path)
         config = load_config()
-        assert config == {"order": ["public", "protected", "private"], "method_type_order": None}
+        assert config == {"order": ["public", "protected", "private"], "method_type_order": None, "exclude": None}
 
     def test_missing_order_key(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that missing order key returns default."""
@@ -53,7 +53,7 @@ some_other_key = "value"
 
         monkeypatch.chdir(tmp_path)
         config = load_config()
-        assert config == {"order": ["public", "protected", "private"], "method_type_order": None}
+        assert config == {"order": ["public", "protected", "private"], "method_type_order": None, "exclude": None}
 
     def test_missing_tool_section(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that missing tool.undersort section returns default."""
@@ -66,7 +66,7 @@ name = "test"
 
         monkeypatch.chdir(tmp_path)
         config = load_config()
-        assert config == {"order": ["public", "protected", "private"], "method_type_order": None}
+        assert config == {"order": ["public", "protected", "private"], "method_type_order": None, "exclude": None}
 
     def test_find_pyproject_in_parent(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that pyproject.toml is found in parent directories."""
@@ -84,7 +84,7 @@ order = ["private", "public", "protected"]
         monkeypatch.chdir(subdir)
 
         config = load_config()
-        assert config == {"order": ["private", "public", "protected"], "method_type_order": None}
+        assert config == {"order": ["private", "public", "protected"], "method_type_order": None, "exclude": None}
 
     def test_corrupted_toml(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that corrupted TOML file falls back to default."""
@@ -97,7 +97,7 @@ order = ["public"  # Invalid TOML
 
         monkeypatch.chdir(tmp_path)
         config = load_config()
-        assert config == {"order": ["public", "protected", "private"], "method_type_order": None}
+        assert config == {"order": ["public", "protected", "private"], "method_type_order": None, "exclude": None}
 
     def test_find_pyproject_toml_not_found(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test _find_pyproject_toml returns None when not found."""
@@ -113,3 +113,39 @@ order = ["public"  # Invalid TOML
         monkeypatch.chdir(tmp_path)
         result = _find_pyproject_toml()
         assert result == pyproject_path
+
+    def test_load_exclude_patterns(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test loading exclude patterns from pyproject.toml."""
+        pyproject_content = """
+[tool.undersort]
+order = ["public", "protected", "private"]
+exclude = ["tests/*", "migrations/*.py"]
+"""
+        pyproject_path = tmp_path / "pyproject.toml"
+        pyproject_path.write_text(pyproject_content)
+
+        monkeypatch.chdir(tmp_path)
+        config = load_config()
+        assert config == {
+            "order": ["public", "protected", "private"],
+            "method_type_order": None,
+            "exclude": ["tests/*", "migrations/*.py"],
+        }
+
+    def test_invalid_exclude_type(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that invalid exclude type falls back to None."""
+        pyproject_content = """
+[tool.undersort]
+order = ["public", "protected", "private"]
+exclude = "invalid"
+"""
+        pyproject_path = tmp_path / "pyproject.toml"
+        pyproject_path.write_text(pyproject_content)
+
+        monkeypatch.chdir(tmp_path)
+        config = load_config()
+        assert config == {
+            "order": ["public", "protected", "private"],
+            "method_type_order": None,
+            "exclude": None,
+        }
