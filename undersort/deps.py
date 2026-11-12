@@ -146,6 +146,25 @@ class _EagerNameCollector(cst.CSTVisitor):
         self.names: set[str] = set()
         self.eager_annotations = eager_annotations
 
+    def visit_ConcatenatedString(self, node: cst.ConcatenatedString) -> bool:
+        """Walk an implicit string concatenation without recursing per literal.
+
+        Args:
+            node: The concatenated string
+
+        Returns:
+            False -- parts are visited manually
+        """
+        # libcst nests each extra literal one level deeper; long chains exceed the recursion limit.
+        stack: list[cst.BaseExpression] = [node]
+        while stack:
+            part = stack.pop()
+            if isinstance(part, cst.ConcatenatedString):
+                stack.extend((part.right, part.left))
+            else:
+                part.visit(self)
+        return False
+
     def visit_FunctionDef(self, node: cst.FunctionDef) -> bool:
         """Collect eager references of a function definition, skipping its body.
 

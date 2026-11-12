@@ -1,8 +1,10 @@
 import tempfile
 from pathlib import Path
 
+import libcst as cst
 import pytest
 
+from undersort.deps import eager_names
 from undersort.sorter import get_method_visibility, sort_file
 
 
@@ -486,3 +488,22 @@ class Example:
             assert protected_instance_idx < protected_class_idx < protected_static_idx
         finally:
             temp_path.unlink()
+
+
+def test_long_implicit_string_concatenation_does_not_recurse(tmp_path: Path) -> None:
+    pieces = "\n".join(f'    "chunk{i}"' for i in range(3000))
+    source = (
+        f"PACKED = (\n{pieces}\n)\n\n\nclass A:\n    BLOB = (\n{pieces}\n    )\n\n"
+        "    def _b(self):\n        pass\n\n    def a(self):\n        pass\n"
+    )
+    path = tmp_path / "packed.py"
+    path.write_text(source)
+
+    assert sort_file(path, ["public", "protected", "private"], sort_module_level=True)
+    assert path.read_text().index("def a(") < path.read_text().index("def _b(")
+
+
+def test_eager_names_walks_long_concatenation() -> None:
+    pieces = " ".join(f'"c{i}"' for i in range(3000))
+    module = cst.parse_module(f"class A(Base):\n    X = ({pieces})\n")
+    assert "Base" in eager_names(module.body[0], eager_annotations=False)

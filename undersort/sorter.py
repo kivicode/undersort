@@ -1,9 +1,12 @@
 """Core sorting logic for class methods."""
 
 import difflib
+import sys
+import threading
 import tokenize
 from collections.abc import Callable, Hashable, Sequence
 from pathlib import Path
+from typing import TypeVar
 
 import libcst as cst
 
@@ -199,6 +202,10 @@ class MethodSorter(cst.CSTTransformer):
         self.order = order
         self.method_type_order = method_type_order or ["instance", "class", "static"]
         self.modified = False
+
+    def visit_SimpleStatementLine(self, node: cst.SimpleStatementLine) -> bool:  # noqa: PLR6301, ARG002
+        """Skip simple statements: they hold no classes, and long expressions nest past the recursion limit."""
+        return False
 
     def leave_ClassDef(  # noqa: PLR0912, PLR0915
         self,
@@ -562,6 +569,37 @@ def _read_source(file_path: Path) -> tuple[str, str]:
     return file_path.read_bytes().decode(encoding), encoding
 
 
+# libcst walks and regenerates trees recursively; a long implicit string concatenation
+# nests one level per literal, so a generated data module can need thousands of frames.
+_DEEP_STACK_BYTES = 256 * 1024 * 1024
+_DEEP_RECURSION_LIMIT = 100_000
+_T = TypeVar("_T")
+
+
+def _call_with_deep_stack(fn: Callable[..., _T], *args: object, **kwargs: object) -> _T:
+    outcome: dict[str, object] = {}
+
+    def run() -> None:
+        try:
+            outcome["value"] = fn(*args, **kwargs)
+        except BaseException as e:  # noqa: BLE001 - re-raised on the caller's thread
+            outcome["error"] = e
+
+    previous_stack = threading.stack_size(_DEEP_STACK_BYTES)
+    previous_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(max(previous_limit, _DEEP_RECURSION_LIMIT))
+    try:
+        worker = threading.Thread(target=run, name="undersort-deep")
+        worker.start()
+        worker.join()
+    finally:
+        threading.stack_size(previous_stack)
+        sys.setrecursionlimit(previous_limit)
+    if "error" in outcome:
+        raise outcome["error"]  # type: ignore[misc]
+    return outcome["value"]  # type: ignore[return-value]
+
+
 def sort_file(
     file_path: Path,
     order: list[str],
@@ -588,6 +626,29 @@ def sort_file(
     Returns:
         True if file was modified (or needs modification in check mode)
     """
+    return _call_with_deep_stack(
+        _sort_file,
+        file_path,
+        order,
+        method_type_order,
+        check_only,
+        show_diff,
+        sort_module_level,
+        python_version,
+        sort_decorated,
+    )
+
+
+def _sort_file(  # noqa: PLR0913, PLR0917
+    file_path: Path,
+    order: list[str],
+    method_type_order: list[str] | None,
+    check_only: bool,
+    show_diff: bool,
+    sort_module_level: bool,
+    python_version: tuple[int, int] | None,
+    sort_decorated: bool,
+) -> bool:
     source_code, encoding = _read_source(file_path)
 
     try:
